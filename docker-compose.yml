@@ -1,12 +1,10 @@
-version: '3.8'
-
 services:
   postgres-db:
     image: postgres:15
     container_name: postgres-fitproject
     environment:
-      POSTGRES_USER: vania
-      POSTGRES_PASSWORD: admin123
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: fitproject_eco
     ports:
       - "5433:5432"
@@ -15,8 +13,12 @@ services:
 
   ms-contenedores:
     build: ../ms-contenedores
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db:5432/fitproject_eco
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "8082:8082"
+      - "8082:8080"
     depends_on:
       - postgres-db
     networks:
@@ -24,8 +26,12 @@ services:
 
   ms-inversiones:
     build: ../ms-inversiones
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db:5432/fitproject_eco
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "8081:8081"
+      - "8081:8080"
     depends_on:
       - postgres-db
     networks:
