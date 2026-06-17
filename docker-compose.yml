@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  postgres-db:
+    image: postgres:15
+    container_name: postgres-fitproject
+    environment:
+      POSTGRES_USER: vania
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: fitproject_eco
+    ports:
+      - "5433:5432"
+    networks:
+      - fitproject-net
+
+  ms-contenedores:
+    build: ../ms-contenedores
+    ports:
+      - "8082:8082"
+    depends_on:
+      - postgres-db
+    networks:
+      - fitproject-net
+
+  ms-inversiones:
+    build: ../ms-inversiones
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres-db
+    networks:
+      - fitproject-net
+
+networks:
+  fitproject-net:
+    driver: bridge
