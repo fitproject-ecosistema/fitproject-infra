@@ -1,42 +1,90 @@
 services:
   postgres-db:
-    image: postgres:15
-    container_name: postgres-fitproject
+    image: postgres:16
+    container_name: postgres-db
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: fitproject_eco
+      POSTGRES_USER: vania
+      POSTGRES_PASSWORD: admin123
     ports:
-      - "5433:5432"
+      - "5432:5432"
     networks:
-      - fitproject-net
+      - fit-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vania -d fitproject_eco"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    networks:
+      - fit-network
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube
+    ports:
+      - "9001:9000"
+    networks:
+      - fit-network
 
   ms-contenedores:
     build: ../ms-contenedores
+    container_name: ms-contenedores
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db:5432/fitproject_eco
-      SPRING_DATASOURCE_USERNAME: ${DB_USER}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "8082:8080"
-    depends_on:
-      - postgres-db
+      SPRING_DATASOURCE_USERNAME: vania
+      SPRING_DATASOURCE_PASSWORD: admin123
+      SPRING_RABBITMQ_HOST: rabbitmq
     networks:
-      - fitproject-net
+      - fit-network
 
   ms-inversiones:
     build: ../ms-inversiones
+    container_name: ms-inversiones
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db:5432/fitproject_eco
-      SPRING_DATASOURCE_USERNAME: ${DB_USER}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "8081:8080"
-    depends_on:
-      - postgres-db
+      SPRING_DATASOURCE_USERNAME: vania
+      SPRING_DATASOURCE_PASSWORD: admin123
+      SPRING_RABBITMQ_HOST: rabbitmq
     networks:
-      - fitproject-net
+      - fit-network
+
+  fitproject-bff:
+    build: ../fitproject-bff
+    container_name: fitproject-bff
+    ports:
+      - "9000:8085"
+    depends_on:
+      ms-contenedores:
+        condition: service_started
+      ms-inversiones:
+        condition: service_started
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    networks:
+      - fit-network
 
 networks:
-  fitproject-net:
+  fit-network:
     driver: bridge
